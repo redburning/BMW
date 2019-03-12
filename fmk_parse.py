@@ -205,7 +205,7 @@ def get_awk_dic():
     
 
 
-def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_name_list, benchmark_point_dir_list, direction_name):
+def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction):
     
     global variable_known
     
@@ -308,17 +308,14 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     if direction_name == 'X':
         for i in range(len(res)):
             deviation.append(x_value[i] - x_standard[i])
-        res['deviation'] = deviation
     
     elif direction_name == 'Y': 
         for i in range(len(res)):
             deviation.append(y_value[i] - y_standard[i])
-        res['deviation'] = deviation
     
     elif direction_name == 'Z': 
         for i in range(len(res)):
             deviation.append(z_value[i] - z_standard[i])
-        res['deviation'] = deviation
         
     elif direction_name == 'A' or direction_name == 'B':
         for i in range(len(res)):
@@ -350,17 +347,21 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
                     print('direction name = A | B')
                     v = -v
             deviation.append(v)
-        res['deviation'] = deviation
+            
+    res['deviation'] = deviation
+    if point_no in dev_correction.keys():
+        res['deviation'] += dev_correction[point_no]
+        print('error correction.')
     
     return res
     
     
 
 
-def transform_yes_singlepoint_no(data, assemble_no, point_a, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name):
+def transform_yes_singlepoint_no(data, assemble_no, point_a, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction):
     
-    data_point_a = transform_yes_singlepoint_yes(data, assemble_no, point_a, benchmark_point_name_list, benchmark_point_dir_list, direction_name)
-    data_point_b = transform_yes_singlepoint_yes(data, assemble_no, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name)
+    data_point_a = transform_yes_singlepoint_yes(data, assemble_no, point_a, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
+    data_point_b = transform_yes_singlepoint_yes(data, assemble_no, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
     
     data_point_a = get_direction_match_data(data_point_a, direction_name)
     data_point_b = get_direction_match_data(data_point_b, direction_name) 
@@ -497,10 +498,20 @@ def dataformat(data):
             measure_point_folder_path = dimensional_chain_folder_path + os.path.sep + measure_point_name + '.csv'
             measure_point_data.to_csv(measure_point_folder_path, index = False)
     
+
+def get_dev_correction(path):
     
+    dev_corr_data = pd.read_csv(path)
+    dev_correction = {}
+    for i in range(len(dev_corr_data)):
+        key = dev_corr_data.iloc[i]['measure_point_no']
+        value = dev_corr_data.iloc[i]['offset']
+        dev_correction[key] = value
+        
+    return dev_correction
+
 
 if __name__ == '__main__':
-    
     
     starttime = time.time()
     frecord = open('running records.txt', 'w')
@@ -515,8 +526,10 @@ if __name__ == '__main__':
     awk_data_path = config['awk_data_path']
     
     fmk_dic = pd.read_csv(fmk_dic_path, encoding = 'ANSI')
-    data_awk = pd.read_csv(awk_data_path, dtype = str)
     
+    dev_correction = get_dev_correction(config['dev_correction'])
+    
+    data_awk = pd.read_csv(awk_data_path, dtype = str)
     data_awk = direction_transform(data_awk)
     data_awk = dataformat_transform(data_awk)
     data_awk['time'] = data_awk['measure_time_date'] + '-' + data_awk['measure_time_time']
@@ -569,13 +582,13 @@ if __name__ == '__main__':
             
             if single_measure_point[index] == 0:
                 point_name_a, point_name_b = point_name_split(point_name)               
-                res = transform_yes_singlepoint_no(data_awk, assemble_name, point_name_a, point_name_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name,)
+                res = transform_yes_singlepoint_no(data_awk, assemble_name, point_name_a, point_name_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
                 res['direction'] = direction_name
                 res['dimensional_chain'] = dimensional_chain_name
                 data_fmk = data_fmk.append(res, ignore_index = True)
             
             elif single_measure_point[index] == 1:
-                res = transform_yes_singlepoint_yes(data_awk, assemble_name, point_name, benchmark_point_name_list, benchmark_point_dir_list, direction_name)
+                res = transform_yes_singlepoint_yes(data_awk, assemble_name, point_name, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
                 res['direction'] = direction_name
                 res['dimensional_chain'] = dimensional_chain_name
                 data_fmk = data_fmk.append(res, ignore_index = True)
