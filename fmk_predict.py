@@ -47,41 +47,37 @@ def direction_transform(data):
 
 
 
-def get_limits():
-    _format = '.csv'
+def get_tolerance(fmk_dic_path):
     
-    file_path = './upper_lower_limits/upper_lower_limits' + _format
+    fmk_dic = pd.read_csv(fmk_dic_path, encoding = 'ANSI')
+    lower_tol_dict = {}
+    upper_tol_dict = {}
     
-    data = pd.read_csv(file_path)
-    lower_dict = {}
-    upper_dict = {}
-    key = list(data['key'])
-    lower = list(data['lower'])
-    upper = list(data['upper'])
-    for index in range(len(data)):
-        if (str(lower[index]) != 'nan' and str(upper[index]) != 'nan'):
-            lower_dict[key[index]] = lower[index]
-            upper_dict[key[index]] = upper[index]
-    return lower_dict, upper_dict
+    for index in range(len(fmk_dic)):
+        key = str(fmk_dic.iloc[index]['分总成号']) + '-' + str(fmk_dic.iloc[index]['测量点号']).replace(' ', '').replace('\n', '') + '-' + str(fmk_dic.iloc[index]['测量方向'])
+        lower_tol_dict[key] = fmk_dic.iloc[index]['公差下限']
+        upper_tol_dict[key] = fmk_dic.iloc[index]['公差上限']
+    
+    return lower_tol_dict, upper_tol_dict
 
 
 
-def do_analysis(dimensional_chain_name, dimensional_chain_data, current_folder):
+def do_analysis(dimensional_chain_name, dimensional_chain_data, lower_dict, upper_dict, current_folder):
     
     _format = '.csv'
-    size_chain_folderpath = current_folder + os.path.sep + dimensional_chain_name
-    if not os.path.exists(size_chain_folderpath):
-        os.makedirs(size_chain_folderpath)
+    dimensional_chain_folderpath = current_folder + os.path.sep + dimensional_chain_name
+    if not os.path.exists(dimensional_chain_folderpath):
+        os.makedirs(dimensional_chain_folderpath)
         
-    point_predicted_folderpath = size_chain_folderpath + os.path.sep + 'points_predicted'
+    point_predicted_folderpath = dimensional_chain_folderpath + os.path.sep + 'points_predicted'
     if not os.path.exists(point_predicted_folderpath):
         os.makedirs(point_predicted_folderpath)
     
-    point_unpredicted_folderpath = size_chain_folderpath + os.path.sep + 'points_unpredicted'
+    point_unpredicted_folderpath = dimensional_chain_folderpath + os.path.sep + 'points_unpredicted'
     if not os.path.exists(point_unpredicted_folderpath):
         os.makedirs(point_unpredicted_folderpath)
         
-    point_notfindlimits_folderpath = size_chain_folderpath + os.path.sep + 'points_notfindlimits'
+    point_notfindlimits_folderpath = dimensional_chain_folderpath + os.path.sep + 'points_notfindlimits'
     if not os.path.exists(point_notfindlimits_folderpath):
         os.makedirs(point_notfindlimits_folderpath)
     
@@ -92,7 +88,6 @@ def do_analysis(dimensional_chain_name, dimensional_chain_data, current_folder):
     periods = 30
     point_unpredicted = pd.DataFrame(columns = ['point_no'])
     point_notfindlimits = pd.DataFrame(columns = ['point_no'])
-    lower_dict, upper_dict = get_limits()
     for point in dimensional_chain_data.groupby(['key']):
         point_name = point[0]
         point_data = point[1]
@@ -146,17 +141,19 @@ def do_analysis(dimensional_chain_name, dimensional_chain_data, current_folder):
 def parallel_analysis(data, current_folder):
     
     thread_no = config['threads_no']
+    fmk_dic_path = config['fmk_dic_path']
+    lower_tol_dict, upper_tol_dict = get_tolerance(fmk_dic_path)
     
-    pool = Pool(processes = thread_no)     
+    pool = Pool(processes = thread_no)
     
     for size_chain in data.groupby(['size_chain']):
         size_chain_name = size_chain[0]
         size_chain_data = size_chain[1]
         
         #parallel_analysis(size_chain_name, size_chain_data, current_folder)
-        pool.apply_async(do_analysis, (size_chain_name, size_chain_data, current_folder, ))
+        pool.apply_async(do_analysis, (size_chain_name, size_chain_data, lower_tol_dict, upper_tol_dict, current_folder, ))
         
-               
+        
     pool.close()
     pool.join()
         
@@ -181,7 +178,7 @@ if __name__ == '__main__':
         dimensional_chain_list[i] = dimensional_chain_list[i].replace("\r\n"," ")
     data["size_chain"] = dimensional_chain_list
     
-    data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '')   
+    data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '')
     data['deviation'] = data['deviation'].astype(float)
     
     f.write('direction transform...' + '\n')
