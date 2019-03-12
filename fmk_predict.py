@@ -66,10 +66,10 @@ def get_limits():
 
 
 
-def parallel_analysis(size_chain_name, size_chain_data, current_folder):
+def do_analysis(dimensional_chain_name, dimensional_chain_data, current_folder):
     
     _format = '.csv'
-    size_chain_folderpath = current_folder + os.path.sep + size_chain_name
+    size_chain_folderpath = current_folder + os.path.sep + dimensional_chain_name
     if not os.path.exists(size_chain_folderpath):
         os.makedirs(size_chain_folderpath)
         
@@ -86,21 +86,21 @@ def parallel_analysis(size_chain_name, size_chain_data, current_folder):
         os.makedirs(point_notfindlimits_folderpath)
     
     
-    size_chain_data['key'] = size_chain_data['assembly_no'] + '-' + size_chain_data['measure_point_no'] + '-' + size_chain_data['direction']
-    size_chain_data = size_chain_data[['key', 'measure_time_date', 'deviation']]
-        
+    dimensional_chain_data['key'] = dimensional_chain_data['assembly_no'] + '-' + dimensional_chain_data['measure_point_no'] + '-' + dimensional_chain_data['direction']
+    dimensional_chain_data = dimensional_chain_data[['key', 'measure_time_date', 'deviation']]
+    
     periods = 30
     point_unpredicted = pd.DataFrame(columns = ['point_no'])
     point_notfindlimits = pd.DataFrame(columns = ['point_no'])
     lower_dict, upper_dict = get_limits()
-    for point in size_chain_data.groupby(['key']):
+    for point in dimensional_chain_data.groupby(['key']):
         point_name = point[0]
         point_data = point[1]
         if point_name in lower_dict.keys() and point_name in upper_dict.keys():
             training_data = point_data[['measure_time_date', 'deviation']]
             training_data = training_data.sort_values(['measure_time_date'])
             training_data.columns = ['ds', 'y']
-           
+            
             if len(training_data) > 20:
                 
                 prophet = Prophet()
@@ -143,7 +143,7 @@ def parallel_analysis(size_chain_name, size_chain_data, current_folder):
     
     
 
-def do_analysis(data, current_folder):
+def parallel_analysis(data, current_folder):
     
     thread_no = config['threads_no']
     
@@ -154,7 +154,7 @@ def do_analysis(data, current_folder):
         size_chain_data = size_chain[1]
         
         #parallel_analysis(size_chain_name, size_chain_data, current_folder)
-        pool.apply_async(parallel_analysis, (size_chain_name, size_chain_data, current_folder, ))
+        pool.apply_async(do_analysis, (size_chain_name, size_chain_data, current_folder, ))
         
                
     pool.close()
@@ -176,10 +176,10 @@ if __name__ == '__main__':
     
     data = pd.read_csv(path, dtype = str) 
     
-    size_chain_list = list(data["size_chain"])
-    for i in range(len(size_chain_list)):
-        size_chain_list[i] = size_chain_list[i].replace("\r\n"," ")
-    data["size_chain"] = size_chain_list
+    dimensional_chain_list = list(data["size_chain"])
+    for i in range(len(dimensional_chain_list)):
+        dimensional_chain_list[i] = dimensional_chain_list[i].replace("\r\n"," ")
+    data["size_chain"] = dimensional_chain_list
     
     data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '')   
     data['deviation'] = data['deviation'].astype(float)
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     
     if not os.path.exists(stage_all_folder):
         os.makedirs(stage_all_folder)
-    do_analysis(data, stage_all_folder)   
+    parallel_analysis(data, stage_all_folder)   
     
     
     stages = pd.Series(data['stage'])
@@ -208,7 +208,7 @@ if __name__ == '__main__':
             os.makedirs(stage_folder)
         
         stage_data = get_stage_data(data, stage_name)
-        do_analysis(stage_data, stage_folder)
+        parallel_analysis(stage_data, stage_folder)
     
         
     endtime = time.time()
