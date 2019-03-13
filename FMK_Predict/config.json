@@ -1,0 +1,6 @@
+{
+    "fmk_data_path": "./fmk.csv",
+	"fmk_dic_path": "./FMK_Dic_New_Direction.csv",
+	"result_path": "./result/",
+	"threads_no": 2
+}
