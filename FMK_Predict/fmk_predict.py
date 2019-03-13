@@ -49,17 +49,16 @@ def direction_transform(data):
 
 def get_tolerance(fmk_dic_path):
     
-    fmk_dic = pd.read_csv(fmk_dic_path, encoding = 'ANSI')
+    fmk_dic = pd.read_csv(fmk_dic_path)
     lower_tol_dict = {}
     upper_tol_dict = {}
     
     for index in range(len(fmk_dic)):
-        key = str(fmk_dic.iloc[index]['分总成号']) + '-' + str(fmk_dic.iloc[index]['测量点号']).replace(' ', '').replace('\n', '') + '-' + str(fmk_dic.iloc[index]['测量方向'])
-        lower_tol_dict[key] = fmk_dic.iloc[index]['公差下限']
-        upper_tol_dict[key] = fmk_dic.iloc[index]['公差上限']
+        key = str(fmk_dic.iloc[index]['assembly_no']) + '-' + str(fmk_dic.iloc[index]['measure_point_no']).replace(' ', '').replace('\n', '') + '-' + str(fmk_dic.iloc[index]['direction'])
+        lower_tol_dict[key] = fmk_dic.iloc[index]['lower_tol']
+        upper_tol_dict[key] = fmk_dic.iloc[index]['upper_tol']
     
     return lower_tol_dict, upper_tol_dict
-
 
 
 def do_analysis(dimensional_chain_name, dimensional_chain_data, lower_dict, upper_dict, current_folder):
@@ -146,12 +145,12 @@ def parallel_analysis(data, current_folder):
     
     pool = Pool(processes = thread_no)
     
-    for size_chain in data.groupby(['size_chain']):
-        size_chain_name = size_chain[0]
-        size_chain_data = size_chain[1]
+    for dimensional_chain in data.groupby(['dimensional_chain']):
+        dimensional_chain_name = dimensional_chain[0]
+        dimensional_chain_data = dimensional_chain[1]
         
-        #parallel_analysis(size_chain_name, size_chain_data, current_folder)
-        pool.apply_async(do_analysis, (size_chain_name, size_chain_data, lower_tol_dict, upper_tol_dict, current_folder, ))
+        #parallel_analysis(dimensional_chain_name, dimensional_chain_data, current_folder)
+        pool.apply_async(do_analysis, (dimensional_chain_name, dimensional_chain_data, lower_tol_dict, upper_tol_dict, current_folder, ))
         
         
     pool.close()
@@ -173,10 +172,10 @@ if __name__ == '__main__':
     
     data = pd.read_csv(path, dtype = str) 
     
-    dimensional_chain_list = list(data["size_chain"])
+    dimensional_chain_list = list(data["dimensional_chain"])
     for i in range(len(dimensional_chain_list)):
         dimensional_chain_list[i] = dimensional_chain_list[i].replace("\r\n"," ")
-    data["size_chain"] = dimensional_chain_list
+    data["dimensional_chain"] = dimensional_chain_list
     
     data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '')
     data['deviation'] = data['deviation'].astype(float)
