@@ -305,19 +305,28 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     stage = list(res['stage'])
     touch_direction_dic = get_awk_dic()
     
+    direction_dic = {'X': 'x_value', 'Y': 'y_value', 'Z': 'z_value'}
+    if (str(assemble_no) + '-' + str(point_no)) in dev_correction.keys():
+        res[direction_dic[direction_name]] += dev_correction[point_no]
+        print('error correction.')
+    
     if direction_name == 'X':
         for i in range(len(res)):
             deviation.append(x_value[i] - x_standard[i])
+        res['deviation'] = deviation
     
     elif direction_name == 'Y': 
         for i in range(len(res)):
             deviation.append(y_value[i] - y_standard[i])
+        res['deviation'] = deviation
     
     elif direction_name == 'Z': 
         for i in range(len(res)):
             deviation.append(z_value[i] - z_standard[i])
+        res['deviation'] = deviation
         
     elif direction_name == 'A' or direction_name == 'B':
+        print('direction == A | B')
         for i in range(len(res)):
             point_id = str(assemble_no) + '-' + stage[i] + '-' + str(point_no) 
             v = sqrt((x_value[i] - x_standard[i])**2 + (y_value[i] - y_standard[i])**2 + (z_value[i] - z_standard[i])**2)
@@ -347,11 +356,7 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
                     print('direction name = A | B')
                     v = -v
             deviation.append(v)
-            
-    res['deviation'] = deviation
-    if point_no in dev_correction.keys():
-        res['deviation'] += dev_correction[point_no]
-        print('error correction.')
+        res['deviation'] = deviation
     
     return res
     
