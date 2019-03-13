@@ -16,7 +16,7 @@ from math import sqrt, sin, cos
 
 def direction_transform(data):
     data_c = data.copy()
-    data_c = data_c.dropna(subset = ['direction'])  
+    data_c = data_c.dropna(subset = ['direction'])
     
     direction = list(data_c['direction'])
     measure_point = list(data_c['measure_point_no'])
@@ -292,7 +292,13 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
             print('size of variable_known is abnormal, maybe forget to clear global variables.')
             
         else:
-            print('Not enough known variables. variable_known length: ' + str(len(variable_known))) 
+            print('Not enough known variables. variable_known length: ' + str(len(variable_known)))
+    
+    direction_dic = {'X': 'x_value', 'Y': 'y_value', 'Z': 'z_value', 'dx': 'x_value', 'dX': 'x_value', 'dY': 'y_value', 'dz': 'z_value'}
+    assemble_point = str(assemble_no) + '-' + str(point_no)
+    if (assemble_point) in dev_correction.keys():
+        res[direction_dic[direction_name]] += dev_correction[assemble_point]
+        print('error correction finished.')
     
     deviation = []
     x_value = list(res['x_value'])
@@ -304,11 +310,6 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     direction = list(res['direction'])
     stage = list(res['stage'])
     touch_direction_dic = get_awk_dic()
-    
-    direction_dic = {'X': 'x_value', 'Y': 'y_value', 'Z': 'z_value'}
-    if (str(assemble_no) + '-' + str(point_no)) in dev_correction.keys():
-        res[direction_dic[direction_name]] += dev_correction[point_no]
-        print('error correction.')
     
     if direction_name == 'X':
         for i in range(len(res)):
@@ -483,9 +484,9 @@ def get_benchmark_point_info():
 def dataformat(data):
     dimensional_chain_list = list(data["dimensional_chain"])
     for i in range(len(dimensional_chain_list)):
-        dimensional_chain_list[i] = dimensional_chain_list[i].replace("\n"," ")
-        dimensional_chain_list[i] = dimensional_chain_list[i].replace("\r"," ")
-        dimensional_chain_list[i] = dimensional_chain_list[i].replace("?"," ")
+        dimensional_chain_list[i] = dimensional_chain_list[i].replace("\n","")
+        dimensional_chain_list[i] = dimensional_chain_list[i].replace("\r","")
+        dimensional_chain_list[i] = dimensional_chain_list[i].replace("?","")
     data["dimensional_chain"] = dimensional_chain_list
     
     for dimensional_chain in data.groupby(["dimensional_chain"]):
@@ -542,24 +543,24 @@ if __name__ == '__main__':
     
     data_fmk = pd.DataFrame(columns = data_awk.columns)
     
-    transform_flag = list(fmk_dic['是否需要转换'])
-    single_measure_point = list(fmk_dic['是否为单个测点'])
-    measure_point_no = list(fmk_dic['测量点号'])
-    assemble_no = list(fmk_dic['分总成号'])
-    direction = list(fmk_dic['测量方向'])
-    benchmark_point_name_1 = list(fmk_dic['基准点1'])
-    benchmark_point_name_2 = list(fmk_dic['基准点2'])
-    benchmark_point_name_3 = list(fmk_dic['基准点3'])
-    benchmark_point_name_4 = list(fmk_dic['基准点4'])
-    benchmark_point_name_5 = list(fmk_dic['基准点5'])
-    benchmark_point_name_6 = list(fmk_dic['基准点6'])
-    benckmark_point_dir_1 = list(fmk_dic['基准点1选取方向'])
-    benckmark_point_dir_2 = list(fmk_dic['基准点2选取方向'])
-    benckmark_point_dir_3 = list(fmk_dic['基准点3选取方向'])
-    benckmark_point_dir_4 = list(fmk_dic['基准点4选取方向'])
-    benckmark_point_dir_5 = list(fmk_dic['基准点5选取方向'])
-    benckmark_point_dir_6 = list(fmk_dic['基准点6选取方向'])
-    dimensional_chain = list(fmk_dic['尺寸链名称'])
+    transform_flag = list(fmk_dic['need_transform'])
+    single_measure_point = list(fmk_dic['single_point'])
+    measure_point_no = list(fmk_dic['measure_point_no'])
+    assemble_no = list(fmk_dic['assembly_no'])
+    direction = list(fmk_dic['direction'])
+    benchmark_point_name_1 = list(fmk_dic['benchmark_point_1'])
+    benchmark_point_name_2 = list(fmk_dic['benchmark_point_2'])
+    benchmark_point_name_3 = list(fmk_dic['benchmark_point_3'])
+    benchmark_point_name_4 = list(fmk_dic['benchmark_point_4'])
+    benchmark_point_name_5 = list(fmk_dic['benchmark_point_5'])
+    benchmark_point_name_6 = list(fmk_dic['benchmark_point_6'])
+    benckmark_point_dir_1 = list(fmk_dic['benchmark_point_1_direction'])
+    benckmark_point_dir_2 = list(fmk_dic['benchmark_point_2_direction'])
+    benckmark_point_dir_3 = list(fmk_dic['benchmark_point_3_direction'])
+    benckmark_point_dir_4 = list(fmk_dic['benchmark_point_4_direction'])
+    benckmark_point_dir_5 = list(fmk_dic['benchmark_point_5_direction'])
+    benckmark_point_dir_6 = list(fmk_dic['benchmark_point_6_direction'])
+    dimensional_chain = list(fmk_dic['dimensional_chain_name'])
     
     for index in range(len(fmk_dic)):
         
@@ -603,12 +604,11 @@ if __name__ == '__main__':
         frecord.flush()
         
     
-    data_fmk.to_csv('fmk.csv', index = False)
-    dataformat(data_fmk)
-    
     result_path = config['result_path']
     if not os.path.exists(result_path):
         os.mkdir(result_path)
+    
+    dataformat(data_fmk)
     data_fmk.to_csv(result_path + 'fmk.csv', index = False)
     
     fjson.close()
