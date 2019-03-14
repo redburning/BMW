@@ -214,6 +214,7 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     data_assemble = data_assemble.sort_values(['time'])
     
     data_point_awk = data_assemble[data_assemble['measure_point_no'] == point_no]
+    data_point_awk = get_direction_match_data(data_point_awk, direction_name)
     if len(data_point_awk) == 0:
         print('measure point  ' + str(point_no) + '  not find in awk data')
         
@@ -537,6 +538,7 @@ if __name__ == '__main__':
     
     data_awk = pd.read_csv(awk_data_path, dtype = str)
     data_awk = direction_transform(data_awk)
+    
     data_awk = dataformat_transform(data_awk)
     data_awk['time'] = data_awk['measure_time_date'] + '-' + data_awk['measure_time_time']
     data_awk['dimensional_chain'] = ''
