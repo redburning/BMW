@@ -17,15 +17,17 @@ from math import sqrt, sin, cos
 def direction_transform(data):
     data_c = data.copy()
     data_c = data_c.dropna(subset = ['direction'])
+    data_c = data_c.sort_values(['assembly_no', 'car_no', 'measure_time_date', 'measure_time_time'])
     
     direction = list(data_c['direction'])
     measure_point = list(data_c['measure_point_no'])
+    car_no = list(data_c['car_no'])
     
     length = len(direction)
     index = 0
     while index < length:
         if (direction[index] == 'X/Y/Z'):
-            if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (index + 2 < length) and (measure_point[index] == measure_point[index + 2]) and (direction[index] == direction[index + 2]):
+            if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]) and (index + 2 < length) and (measure_point[index] == measure_point[index + 2]) and (direction[index] == direction[index + 2]) and (car_no[index] == car_no[index + 2]):
                 direction[index:index + 3] = ['X', 'Y', 'Z']
                 index += 3
             # 只有一行的情况，需要补充
@@ -36,6 +38,7 @@ def direction_transform(data):
                 direction.append('Y')
                 direction.append('Z')
                 index += 1
+                print('只有一行')
         else:
             index += 1
     
@@ -207,18 +210,18 @@ def get_awk_dic():
 
 def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction):
     
+    data.to_csv('data.csv', index = False)
+    
     global variable_known
     
     data_assemble = data[data['assembly_no'] == str(assemble_no)]
-    data_assemble = direction_transform(data_assemble)
+    #data_assemble = direction_transform(data_assemble)
     data_assemble = data_assemble.sort_values(['time'])
     
     data_point_awk = data_assemble[data_assemble['measure_point_no'] == point_no]
     data_point_awk = get_direction_match_data(data_point_awk, direction_name)
     if len(data_point_awk) == 0:
         print('measure point  ' + str(point_no) + '  not find in awk data')
-        
-    time_stamp = list(data_point_awk['time'])
     
     data_point_0 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[0]]    
     data_point_0 = data_point_0[(data_point_0['direction'].astype(str) == benchmark_point_dir_list[0]) | (data_point_0['direction'].astype(str) == benchmark_point_dir_list[0] + '/1')]
@@ -250,6 +253,17 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     if len(data_point_5) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[5]) + '  of measure point  ' + str(point_no) + '  not find in awk data')
     
+    
+    data_point_0.to_csv('data_point_0.csv', index = False)
+    data_point_1.to_csv('data_point_1.csv', index = False)
+    data_point_2.to_csv('data_point_2.csv', index = False)
+    data_point_3.to_csv('data_point_3.csv', index = False)
+    data_point_4.to_csv('data_point_4.csv', index = False)
+    data_point_5.to_csv('data_point_5.csv', index = False)
+    data_point_awk.to_csv('data_point_awk.csv', index = False)
+    
+    
+    time_stamp = list(data_point_awk['time'])
     res = pd.DataFrame(columns = data_point_awk.columns)
     
     for index in range(len(time_stamp)):
@@ -267,7 +281,7 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
             
             x0 = [0, 0, 0, 0, 0, 0]
             
-            alpha, beta, gamma, tx, ty, tz = fsolve(func = f, x0 = x0, xtol = 1e-20)
+            alpha, beta, gamma, tx, ty, tz = fsolve(func = f, x0 = x0)
             
             a = sy.Matrix([[1, 0, 0, tx], [0, 1, 0, ty], [0, 0, 1, tz], [0, 0, 0, 1]])
             b = sy.Matrix([[cos(gamma), -sin(gamma), 0, 0], [sin(gamma), cos(gamma), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
@@ -366,6 +380,8 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
 
 
 def transform_yes_singlepoint_no(data, assemble_no, point_a, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction):
+    
+    data.to_csv('data.csv', index = False)
     
     data_point_a = transform_yes_singlepoint_yes(data, assemble_no, point_a, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
     data_point_b = transform_yes_singlepoint_yes(data, assemble_no, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
@@ -538,6 +554,8 @@ if __name__ == '__main__':
     
     data_awk = pd.read_csv(awk_data_path, dtype = str)
     data_awk = direction_transform(data_awk)
+    
+    data_awk.to_csv('awk_direc_transform.csv', index = False)
     
     data_awk = dataformat_transform(data_awk)
     data_awk['time'] = data_awk['measure_time_date'] + '-' + data_awk['measure_time_time']
