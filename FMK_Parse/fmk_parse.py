@@ -4,6 +4,7 @@ Created on Mon Sep 17 09:29:36 2018
 
 @author: weijie
 """
+
 import time
 import os
 from scipy.optimize import fsolve
@@ -17,7 +18,7 @@ from math import sqrt, sin, cos
 def direction_transform(data):
     data_c = data.copy()
     data_c = data_c.dropna(subset = ['direction'])
-    data_c = data_c.sort_values(['assembly_no', 'car_no', 'measure_time_date', 'measure_time_time'])
+    data_c = data_c.sort_values(['assembly_no', 'car_no', 'measure_point_no', 'measure_time_date', 'measure_time_time'])
     
     direction = list(data_c['direction'])
     measure_point = list(data_c['measure_point_no'])
@@ -30,15 +31,13 @@ def direction_transform(data):
             if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]) and (index + 2 < length) and (measure_point[index] == measure_point[index + 2]) and (direction[index] == direction[index + 2]) and (car_no[index] == car_no[index + 2]):
                 direction[index:index + 3] = ['X', 'Y', 'Z']
                 index += 3
-            # 只有一行的情况，需要补充
             else:
                 direction[index] = 'X'
-                data_c = data_c.append(data.iloc[index], ignore_index = True)
-                data_c = data_c.append(data.iloc[index], ignore_index = True)
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
                 direction.append('Y')
                 direction.append('Z')
                 index += 1
-                print('只有一行')
         else:
             index += 1
     
@@ -50,6 +49,7 @@ def direction_transform(data):
 
 
 def get_direction_match_data(data, direction):
+    
     res = data.copy()
     if direction == 'dx' or direction == 'dX':
         res = res[(res['direction'] == 'X') | (res['direction'] == 'X/1')]
@@ -72,73 +72,64 @@ def get_direction_match_data(data, direction):
     
 
 
-def transform_no_singlepoint_yes(data, assemble_no, point_no, direction_name):    
-    data_res = data[(data['assembly_no'] == str(assemble_no)) & (data['measure_point_no'] == point_no)]
-    data_res = get_direction_match_data(data_res, direction_name)
-    data_res = data_res.sort_values(['time'])
-    return data_res
 
-
-def transform_no_singlepoint_no(data, assemble_no, point_a, point_b, direction_name):
-    
-    data_assemble = data[data['assembly_no'] == str(assemble_no)]
-    data_point_a = data_assemble[data_assemble['measure_point_no'] == point_a]
-    data_point_b = data_assemble[data_assemble['measure_point_no'] == point_b]
-    
-    data_point_a = get_direction_match_data(data_point_a, direction_name)
-    data_point_b = get_direction_match_data(data_point_b, direction_name)      
-    
-    data_point_a = data_point_a.sort_values(['time'])
-    data_point_b = data_point_b.sort_values(['time'])
+def get_point_difference(data_point_a, data_point_b):
     
     data_res = pd.DataFrame(columns = data_point_a.columns)
     
-    measure_value_dic = {'dx' : 'x_value', 'dX' : 'x_value', 'dy' : 'y_value', 'dY' : 'y_value', 'dz' : 'z_value', 'dZ' : 'z_value'}
-    standard_value_dic = {'dx' : 'x_standard', 'dX' : 'x_standard', 'dy' : 'y_standard', 'dY' : 'y_standard', 'dz' : 'z_standard', 'dZ' : 'z_standard'}
-    
-    if len(data_point_a) == len(data_point_b):
-        deviation_ab = []
-        measure_value_ab = []
-        standard_value_ab = []
-        measure_value_a = list(data_point_a[measure_value_dic[direction_name]])
-        measure_value_b = list(data_point_b[measure_value_dic[direction_name]])
-        standard_value_a = list(data_point_a[standard_value_dic[direction_name]])
-        standard_value_b = list(data_point_b[standard_value_dic[direction_name]])
-        for i in range(len(data_point_a)):
-            measure_value_ab.append(abs(measure_value_a[i] - measure_value_b[i]))
-            standard_value_ab.append(abs(standard_value_a[i] - standard_value_b[i]))
-            deviation_ab.append(measure_value_ab[i] - standard_value_ab[i])
-        data_res = data_res.append(data_point_a, ignore_index = True)
+    if (len(data_point_a) > 0) and (len(data_point_b) > 0):
+        name_point_a = data_point_a.iloc[0]['measure_point_no']
+        name_point_b = data_point_b.iloc[0]['measure_point_no']
+        data_point_a = data_point_a.sort_values(['car_no', 'time'])
+        data_point_b = data_point_b.sort_values(['car_no', 'time'])
         
-        data_res[measure_value_dic[direction_name]] = measure_value_ab
-        data_res[standard_value_dic[direction_name]] = standard_value_ab
-        data_res['deviation'] = deviation_ab
-    
+        measure_value_dic = {'dx' : 'x_value', 'dX' : 'x_value', 'dy' : 'y_value', 'dY' : 'y_value', 'dz' : 'z_value', 'dZ' : 'z_value'}
+        standard_value_dic = {'dx' : 'x_standard', 'dX' : 'x_standard', 'dy' : 'y_standard', 'dY' : 'y_standard', 'dz' : 'z_standard', 'dZ' : 'z_standard'}
+        
+        if len(data_point_a) == len(data_point_b):
+            deviation_ab = []
+            measure_value_ab = []
+            standard_value_ab = []
+            measure_value_a = list(data_point_a[measure_value_dic[direction_name]])
+            measure_value_b = list(data_point_b[measure_value_dic[direction_name]])
+            standard_value_a = list(data_point_a[standard_value_dic[direction_name]])
+            standard_value_b = list(data_point_b[standard_value_dic[direction_name]])
+            for i in range(len(data_point_a)):
+                measure_value_ab.append(abs(measure_value_a[i] - measure_value_b[i]))
+                standard_value_ab.append(abs(standard_value_a[i] - standard_value_b[i]))
+                deviation_ab.append(measure_value_ab[i] - standard_value_ab[i])
+            data_res = data_res.append(data_point_a, ignore_index = True)
+            
+            data_res[measure_value_dic[direction_name]] = measure_value_ab
+            data_res[standard_value_dic[direction_name]] = standard_value_ab
+            data_res['deviation'] = deviation_ab
+        
+        else:
+            time_list = list(data_point_a['time'])
+            carno_list = list(data_point_a['car_no'])
+            for i in range(len(data_point_a)):
+                time = time_list[i]
+                car_no = carno_list[i]
+                for j in range(len(data_point_b)):
+                    if (data_point_b.iloc[j]['time'] == time) and (data_point_b.iloc[j]['car_no'] == car_no):
+                        temp_data = data_point_a.iloc[i].copy()
+                        temp_data[measure_value_dic[direction_name]] = abs(data_point_a.iloc[i][measure_value_dic[direction_name]] - data_point_b.iloc[j][measure_value_dic[direction_name]])
+                        temp_data[standard_value_dic[direction_name]] = abs(data_point_a.iloc[i][standard_value_dic[direction_name]] - data_point_b.iloc[j][standard_value_dic[direction_name]])
+                        temp_data['deviation'] = temp_data[measure_value_dic[direction_name]] - temp_data[standard_value_dic[direction_name]]
+                        data_res = data_res.append(temp_data, ignore_index = True)
+                        break
+        
+        data_res['measure_point_no'] = name_point_a + '-' + name_point_b
     else:
-        time_stamp = list(data_point_a['time'])
-    
-        for i in range(len(data_point_a)):
-            time = time_stamp[i]
-            for j in range(len(data_point_b)):
-                if data_point_b.iloc[j]['time'] == time:
-                    temp_data = data_point_a.iloc[i].copy()
-                    temp_data[measure_value_dic[direction_name]] = abs(data_point_a.iloc[i][measure_value_dic[direction_name]] - data_point_b.iloc[j][measure_value_dic[direction_name]])
-                    temp_data[standard_value_dic[direction_name]] = abs(data_point_a.iloc[i][standard_value_dic[direction_name]] - data_point_b.iloc[j][standard_value_dic[direction_name]])
-                    temp_data['deviation'] = temp_data[measure_value_dic[direction_name]] - temp_data[standard_value_dic[direction_name]]
-                    data_res = data_res.append(temp_data, ignore_index = True)
-                    break
-    
-    data_res['measure_point_no'] = point_a + '-' + point_b
-    
+        print('abnormal size of two points while calculating difference.')
+        
     return data_res
 
-    
 
 
-
-def get_vars_known_according_timestamp(data, key):
+def get_vars_known_according_time_carno(data, time, car_no):
     for i in range(len(data)):        
-        if data.iloc[i]['time'] == key:
+        if (data.iloc[i]['time'] == time) and (data.iloc[i]['car_no'] == car_no):
             x = data.iloc[i]['x_value']
             y = data.iloc[i]['y_value']     
             z = data.iloc[i]['z_value']
@@ -205,12 +196,38 @@ def get_awk_dic():
         touch_direction_dic[key[i]] = direction[i]
         
     return touch_direction_dic
+
+
+
+def transform_no_singlepoint_yes(data, assemble_no, point_no, direction_name):    
+    
+    data_res = data[(data['assembly_no'] == str(assemble_no)) & (data['measure_point_no'] == point_no)]
+    data_res = get_direction_match_data(data_res, direction_name)
+    data_res = data_res.sort_values(['car_no', 'time'])
+    
+    return data_res
+
+
+
+
+def transform_no_singlepoint_no(data, assemble_no, point_a, point_b, direction_name):
+    
+    data_assemble = data[data['assembly_no'] == str(assemble_no)]
+    data_point_a = data_assemble[data_assemble['measure_point_no'] == point_a]
+    data_point_b = data_assemble[data_assemble['measure_point_no'] == point_b]
+    
+    data_point_a = get_direction_match_data(data_point_a, direction_name)
+    data_point_b = get_direction_match_data(data_point_b, direction_name)
+    
+    data_res = get_point_difference(data_point_a, data_point_b)
+    
+    return data_res
+
+    
     
 
 
 def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction):
-    
-    data.to_csv('data.csv', index = False)
     
     global variable_known
     
@@ -223,64 +240,55 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     if len(data_point_awk) == 0:
         print('measure point  ' + str(point_no) + '  not find in awk data')
     
-    data_point_0 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[0]]    
+    data_point_0 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[0]]
     data_point_0 = data_point_0[(data_point_0['direction'].astype(str) == benchmark_point_dir_list[0]) | (data_point_0['direction'].astype(str) == benchmark_point_dir_list[0] + '/1')]
     if len(data_point_0) == 0:
-        print('benchmark point  ' + str(benchmark_point_name_list[0]) + '  of measure point  ' + str(point_no) + '  not find in awk data')
+        print('benchmark point  ' + str(benchmark_point_name_list[0]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_1 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[1]]
     data_point_1 = data_point_1[(data_point_1['direction'].astype(str) == benchmark_point_dir_list[1]) | (data_point_1['direction'].astype(str) == benchmark_point_dir_list[1] + '/1')]
     if len(data_point_1) == 0:
-        print('benchmark point  ' + str(benchmark_point_name_list[1]) + '  of measure point  ' + str(point_no) + '  not find in awk data')
+        print('benchmark point  ' + str(benchmark_point_name_list[1]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_2 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[2]]
     data_point_2 = data_point_2[(data_point_2['direction'].astype(str) == benchmark_point_dir_list[2]) | (data_point_2['direction'].astype(str) == benchmark_point_dir_list[2] + '/1')]
     if len(data_point_2) == 0:
-        print('benchmark point  ' + str(benchmark_point_name_list[2]) + '  of measure point  ' + str(point_no) + '  not find in awk data')
+        print('benchmark point  ' + str(benchmark_point_name_list[2]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_3 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[3]]
     data_point_3 = data_point_3[(data_point_3['direction'].astype(str) == benchmark_point_dir_list[3]) | (data_point_3['direction'].astype(str) == benchmark_point_dir_list[3] + '/1')]
     if len(data_point_3) == 0:
-        print('benchmark point  ' + str(benchmark_point_name_list[3]) + '  of measure point  ' + str(point_no) + '  not find in awk data')
+        print('benchmark point  ' + str(benchmark_point_name_list[3]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_4 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[4]]
     data_point_4 = data_point_4[(data_point_4['direction'].astype(str) == benchmark_point_dir_list[4]) | (data_point_4['direction'].astype(str) == benchmark_point_dir_list[4] + '/1')]
     if len(data_point_4) == 0:
-        print('benchmark point  ' + str(benchmark_point_name_list[4]) + '  of measure point  ' + str(point_no) + '  not find in awk data')    
+        print('benchmark point  ' + str(benchmark_point_name_list[4]) + ' of measure point  ' + str(point_no) + ' not find in awk data')    
     
     data_point_5 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[5]]
     data_point_5 = data_point_5[(data_point_5['direction'].astype(str) == benchmark_point_dir_list[5]) | (data_point_5['direction'].astype(str) == benchmark_point_dir_list[5] + '/1')]
     if len(data_point_5) == 0:
-        print('benchmark point  ' + str(benchmark_point_name_list[5]) + '  of measure point  ' + str(point_no) + '  not find in awk data')
+        print('benchmark point  ' + str(benchmark_point_name_list[5]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
-    
-    data_point_0.to_csv('data_point_0.csv', index = False)
-    data_point_1.to_csv('data_point_1.csv', index = False)
-    data_point_2.to_csv('data_point_2.csv', index = False)
-    data_point_3.to_csv('data_point_3.csv', index = False)
-    data_point_4.to_csv('data_point_4.csv', index = False)
-    data_point_5.to_csv('data_point_5.csv', index = False)
-    data_point_awk.to_csv('data_point_awk.csv', index = False)
-    
-    
-    time_stamp = list(data_point_awk['time'])
+    time_list = list(data_point_awk['time'])
+    carno_list = list(data_point_awk['car_no'])
     res = pd.DataFrame(columns = data_point_awk.columns)
     
-    for index in range(len(time_stamp)):
-        key = time_stamp[index]
+    for index in range(len(time_list)):
+        time = time_list[index]
+        car_no = carno_list[index]
         
         variable_known = []
-        get_vars_known_according_timestamp(data_point_0, key)
-        get_vars_known_according_timestamp(data_point_1, key)
-        get_vars_known_according_timestamp(data_point_2, key)
-        get_vars_known_according_timestamp(data_point_3, key)
-        get_vars_known_according_timestamp(data_point_4, key)
-        get_vars_known_according_timestamp(data_point_5, key)
+        get_vars_known_according_time_carno(data_point_0, time, car_no)
+        get_vars_known_according_time_carno(data_point_1, time, car_no)
+        get_vars_known_according_time_carno(data_point_2, time, car_no)
+        get_vars_known_according_time_carno(data_point_3, time, car_no)
+        get_vars_known_according_time_carno(data_point_4, time, car_no)
+        get_vars_known_according_time_carno(data_point_5, time, car_no)
         
         if len(variable_known) == 24:
             
             x0 = [0, 0, 0, 0, 0, 0]
-            
             alpha, beta, gamma, tx, ty, tz = fsolve(func = f, x0 = x0)
             
             a = sy.Matrix([[1, 0, 0, tx], [0, 1, 0, ty], [0, 0, 1, tz], [0, 0, 0, 1]])
@@ -305,7 +313,6 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
         
         elif len(variable_known) > 24:
             print('size of variable_known is abnormal, maybe forget to clear global variables.')
-            
         else:
             print('Not enough known variables. variable_known length: ' + str(len(variable_known)))
     
@@ -381,56 +388,15 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
 
 def transform_yes_singlepoint_no(data, assemble_no, point_a, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction):
     
-    data.to_csv('data.csv', index = False)
-    
     data_point_a = transform_yes_singlepoint_yes(data, assemble_no, point_a, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
     data_point_b = transform_yes_singlepoint_yes(data, assemble_no, point_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
     
     data_point_a = get_direction_match_data(data_point_a, direction_name)
-    data_point_b = get_direction_match_data(data_point_b, direction_name) 
+    data_point_b = get_direction_match_data(data_point_b, direction_name)
     
-    res = pd.DataFrame(columns = data_point_a.columns)
-    
-    measure_value_dic = {'dx' : 'x_value', 'dX' : 'x_value', 'dy' : 'y_value', 'dY' : 'y_value', 'dz' : 'z_value', 'dZ' : 'z_value'}
-    standard_value_dic = {'dx' : 'x_standard', 'dX' : 'x_standard', 'dy' : 'y_standard', 'dY' : 'y_standard', 'dz' : 'z_standard', 'dZ' : 'z_standard'}
-    
-    if len(data_point_a) == len(data_point_b):
-        deviation_ab = []
-        measure_value_ab = []
-        standard_value_ab = []
-        measure_value_a = list(data_point_a[measure_value_dic[direction_name]])
-        measure_value_b = list(data_point_b[measure_value_dic[direction_name]])
-        standard_value_a = list(data_point_a[standard_value_dic[direction_name]])
-        standard_value_b = list(data_point_b[standard_value_dic[direction_name]])
-        for i in range(len(data_point_a)):
-            measure_value_ab.append(abs(measure_value_a[i] - measure_value_b[i]))
-            standard_value_ab.append(abs(standard_value_a[i] - standard_value_b[i]))
-            deviation_ab.append(measure_value_ab[i] - standard_value_ab[i])
-        res = res.append(data_point_a, ignore_index = True)
-        
-        res[measure_value_dic[direction_name]] = measure_value_ab
-        res[standard_value_dic[direction_name]] = standard_value_ab
-        res['deviation'] = deviation_ab
-    
-    else:
-        time_stamp = list(data_point_a['time'])
-    
-        for i in range(len(data_point_a)):
-            time = time_stamp[i]
-            for j in range(len(data_point_b)):
-                if data_point_b.iloc[j]['time'] == time:
-                    temp_data = data_point_a.iloc[i].copy()
-                    temp_data[measure_value_dic[direction_name]] = abs(data_point_a.iloc[i][measure_value_dic[direction_name]] - data_point_b.iloc[j][measure_value_dic[direction_name]])
-                    temp_data[standard_value_dic[direction_name]] = abs(data_point_a.iloc[i][standard_value_dic[direction_name]] - data_point_b.iloc[j][standard_value_dic[direction_name]])
-                    temp_data['deviation'] = temp_data[measure_value_dic[direction_name]] - temp_data[standard_value_dic[direction_name]]
-                    res = res.append(temp_data, ignore_index = True)
-                    break
-         
-    res['measure_point_no'] = point_a + '-' + point_b
+    res = get_point_difference(data_point_a, data_point_b)
     
     return res
-    
-
 
 
 
@@ -467,7 +433,7 @@ def get_benchmark_point_info():
     for dire in str(benckmark_point_dir_1[index]).split('/'):
         if dire != 'nan':
             benchmark_point_dir_list.append(dire)
-            benchmark_point_name_list.append(benchmark_point_name_1[index])        
+            benchmark_point_name_list.append(benchmark_point_name_1[index])
 
     for dire in str(benckmark_point_dir_2[index]).split('/'):
         if dire != 'nan':
@@ -521,6 +487,7 @@ def dataformat(data):
             measure_point_folder_path = dimensional_chain_folder_path + os.path.sep + measure_point_name + '.csv'
             measure_point_data.to_csv(measure_point_folder_path, index = False)
     
+    
 
 def get_dev_correction(path):
     
@@ -532,6 +499,7 @@ def get_dev_correction(path):
         dev_correction[key] = value
         
     return dev_correction
+
 
 
 if __name__ == '__main__':
@@ -554,8 +522,6 @@ if __name__ == '__main__':
     
     data_awk = pd.read_csv(awk_data_path, dtype = str)
     data_awk = direction_transform(data_awk)
-    
-    data_awk.to_csv('awk_direc_transform.csv', index = False)
     
     data_awk = dataformat_transform(data_awk)
     data_awk['time'] = data_awk['measure_time_date'] + '-' + data_awk['measure_time_time']
