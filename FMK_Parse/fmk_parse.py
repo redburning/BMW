@@ -218,9 +218,6 @@ def transform_no_singlepoint_no(data, assemble_no, point_a, point_b, direction_n
     data_point_a = data_assemble[data_assemble['measure_point_no'] == point_a]
     data_point_b = data_assemble[data_assemble['measure_point_no'] == point_b]
     
-    data_point_a.to_csv('data_point_a.csv', index = False)
-    data_point_b.to_csv('data_point_b.csv', index = False)
-    
     data_point_a = get_direction_match_data(data_point_a, direction_name)
     data_point_b = get_direction_match_data(data_point_b, direction_name)
     
@@ -536,12 +533,9 @@ if __name__ == '__main__':
     dev_correction = get_dev_correction(config['dev_correction'])
     
     data_awk = pd.read_csv(awk_data_path, dtype = str)
-    data_awk.to_csv('before_transform.csv', index = False)
     data_awk = direction_transform(data_awk)
-    data_awk.to_csv('after_transform.csv', index = False)
     
     data_awk = dataformat_transform(data_awk)
-    
     
     data_awk['time'] = data_awk['measure_time_date'] + '-' + data_awk['measure_time_time']
     data_awk['dimensional_chain'] = ''
