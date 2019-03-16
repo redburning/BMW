@@ -199,6 +199,8 @@ def get_awk_dic():
 
 
 
+
+
 def transform_no_singlepoint_yes(data, assemble_no, point_no, direction_name):    
     
     data_res = data[(data['assembly_no'] == str(assemble_no)) & (data['measure_point_no'] == point_no)]
@@ -215,6 +217,9 @@ def transform_no_singlepoint_no(data, assemble_no, point_a, point_b, direction_n
     data_assemble = data[data['assembly_no'] == str(assemble_no)]
     data_point_a = data_assemble[data_assemble['measure_point_no'] == point_a]
     data_point_b = data_assemble[data_assemble['measure_point_no'] == point_b]
+    
+    data_point_a.to_csv('data_point_a.csv', index = False)
+    data_point_b.to_csv('data_point_b.csv', index = False)
     
     data_point_a = get_direction_match_data(data_point_a, direction_name)
     data_point_b = get_direction_match_data(data_point_b, direction_name)
@@ -269,6 +274,16 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     data_point_5 = data_point_5[(data_point_5['direction'].astype(str) == benchmark_point_dir_list[5]) | (data_point_5['direction'].astype(str) == benchmark_point_dir_list[5] + '/1')]
     if len(data_point_5) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[5]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
+    
+    '''
+    data_point_0.to_csv('data_point_0.csv', index = False)
+    data_point_1.to_csv('data_point_1.csv', index = False)
+    data_point_2.to_csv('data_point_2.csv', index = False)
+    data_point_3.to_csv('data_point_3.csv', index = False)
+    data_point_4.to_csv('data_point_4.csv', index = False)
+    data_point_5.to_csv('data_point_5.csv', index = False)
+    data_point_awk.to_csv('data_point_awk.csv', index = False)
+    '''
     
     time_list = list(data_point_awk['time'])
     carno_list = list(data_point_awk['car_no'])
@@ -521,9 +536,13 @@ if __name__ == '__main__':
     dev_correction = get_dev_correction(config['dev_correction'])
     
     data_awk = pd.read_csv(awk_data_path, dtype = str)
+    data_awk.to_csv('before_transform.csv', index = False)
     data_awk = direction_transform(data_awk)
+    data_awk.to_csv('after_transform.csv', index = False)
     
     data_awk = dataformat_transform(data_awk)
+    
+    
     data_awk['time'] = data_awk['measure_time_date'] + '-' + data_awk['measure_time_time']
     data_awk['dimensional_chain'] = ''
     
@@ -534,6 +553,7 @@ if __name__ == '__main__':
     measure_point_no = list(fmk_dic['measure_point_no'])
     assemble_no = list(fmk_dic['assembly_no'])
     direction = list(fmk_dic['direction'])
+    direction_exec = list(fmk_dic['direction_exec'])
     benchmark_point_name_1 = list(fmk_dic['benchmark_point_1'])
     benchmark_point_name_2 = list(fmk_dic['benchmark_point_2'])
     benchmark_point_name_3 = list(fmk_dic['benchmark_point_3'])
@@ -553,18 +573,19 @@ if __name__ == '__main__':
         assemble_name = assemble_no[index]
         point_name = measure_point_no[index]
         direction_name = direction[index]
+        direction_exec_name = direction_exec[index]
         dimensional_chain_name = dimensional_chain[index]
         if transform_flag[index] == 0:
             if single_measure_point[index] == 0:
                 point_name_a, point_name_b = point_name_split(point_name)
                 res = transform_no_singlepoint_no(data_awk, assemble_name, point_name_a, point_name_b, direction_name)
-                res['direction'] = direction_name
+                res['direction'] = direction_exec_name
                 res['dimensional_chain'] = dimensional_chain_name
                 data_fmk = data_fmk.append(res, ignore_index = True)
             
             elif single_measure_point[index] == 1:                
                 res = transform_no_singlepoint_yes(data_awk, assemble_name, point_name, direction_name)
-                res['direction'] = direction_name
+                res['direction'] = direction_exec_name
                 res['dimensional_chain'] = dimensional_chain_name
                 data_fmk = data_fmk.append(res, ignore_index = True)
                 
@@ -573,22 +594,21 @@ if __name__ == '__main__':
             direction_global = benchmark_point_dir_list
             
             if single_measure_point[index] == 0:
-                point_name_a, point_name_b = point_name_split(point_name)               
+                point_name_a, point_name_b = point_name_split(point_name)
                 res = transform_yes_singlepoint_no(data_awk, assemble_name, point_name_a, point_name_b, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
-                res['direction'] = direction_name
+                res['direction'] = direction_exec_name
                 res['dimensional_chain'] = dimensional_chain_name
                 data_fmk = data_fmk.append(res, ignore_index = True)
             
             elif single_measure_point[index] == 1:
                 res = transform_yes_singlepoint_yes(data_awk, assemble_name, point_name, benchmark_point_name_list, benchmark_point_dir_list, direction_name, dev_correction)
-                res['direction'] = direction_name
+                res['direction'] = direction_exec_name
                 res['dimensional_chain'] = dimensional_chain_name
                 data_fmk = data_fmk.append(res, ignore_index = True)
         
         print('current progress:' + str(index + 1) + '/' + str(len(fmk_dic)))
         frecord.write('current progress:' + str(index + 1) + '/' + str(len(fmk_dic)) + '\n')
-        frecord.flush()
-        
+        frecord.flush()    
     
     result_path = config['result_path']
     if not os.path.exists(result_path):
