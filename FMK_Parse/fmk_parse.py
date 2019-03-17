@@ -80,8 +80,8 @@ def get_point_difference(data_point_a, data_point_b):
     if (len(data_point_a) > 0) and (len(data_point_b) > 0):
         name_point_a = data_point_a.iloc[0]['measure_point_no']
         name_point_b = data_point_b.iloc[0]['measure_point_no']
-        data_point_a = data_point_a.sort_values(['car_no', 'time'])
-        data_point_b = data_point_b.sort_values(['car_no', 'time'])
+        data_point_a = data_point_a.sort_values(['time'])
+        data_point_b = data_point_b.sort_values(['time'])
         
         measure_value_dic = {'dx' : 'x_value', 'dX' : 'x_value', 'dy' : 'y_value', 'dY' : 'y_value', 'dz' : 'z_value', 'dZ' : 'z_value'}
         standard_value_dic = {'dx' : 'x_standard', 'dX' : 'x_standard', 'dy' : 'y_standard', 'dY' : 'y_standard', 'dz' : 'z_standard', 'dZ' : 'z_standard'}
@@ -205,7 +205,7 @@ def transform_no_singlepoint_yes(data, assemble_no, point_no, direction_name):
     
     data_res = data[(data['assembly_no'] == str(assemble_no)) & (data['measure_point_no'] == point_no)]
     data_res = get_direction_match_data(data_res, direction_name)
-    data_res = data_res.sort_values(['car_no', 'time'])
+    data_res = data_res.sort_values(['time'])
     
     return data_res
 
@@ -234,7 +234,6 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     global variable_known
     
     data_assemble = data[data['assembly_no'] == str(assemble_no)]
-    #data_assemble = direction_transform(data_assemble)
     data_assemble = data_assemble.sort_values(['time'])
     
     data_point_awk = data_assemble[data_assemble['measure_point_no'] == point_no]
