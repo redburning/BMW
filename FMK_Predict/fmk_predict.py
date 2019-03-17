@@ -54,7 +54,7 @@ def get_tolerance(fmk_dic_path):
     upper_tol_dict = {}
     
     for index in range(len(fmk_dic)):
-        key = str(fmk_dic.iloc[index]['assembly_no']) + '-' + str(fmk_dic.iloc[index]['measure_point_no']).replace(' ', '').replace('\n', '') + '-' + str(fmk_dic.iloc[index]['direction'])
+        key = str(fmk_dic.iloc[index]['assembly_no']) + '-' + str(fmk_dic.iloc[index]['measure_point_no']).replace(' ', '').replace('\n', '') + '-' + str(fmk_dic.iloc[index]['direction_exec'])
         lower_tol_dict[key] = fmk_dic.iloc[index]['lower_tol']
         upper_tol_dict[key] = fmk_dic.iloc[index]['upper_tol']
     
@@ -90,6 +90,9 @@ def do_analysis(dimensional_chain_name, dimensional_chain_data, lower_dict, uppe
     for point in dimensional_chain_data.groupby(['key']):
         point_name = point[0]
         point_data = point[1]
+        print('----------------')
+        print(point_name)
+        print('----------------')
         if point_name in lower_dict.keys() and point_name in upper_dict.keys():
             training_data = point_data[['measure_time_date', 'deviation']]
             training_data = training_data.sort_values(['measure_time_date'])
