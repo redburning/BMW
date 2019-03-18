@@ -1,0 +1,5 @@
+{
+    "awk_data_path": "./g38_awk_old.csv",
+	"result_path": "./result/",
+	"threads_no": 4
+}
