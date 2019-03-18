@@ -32,36 +32,174 @@ def get_stage_data(data, stage_no):
 
 
 def direction_transform(data):
-    data = data.dropna(subset = ['direction'])
-    direction = list(data['direction'])
-    ipetype = list(data['ipetype'])
-    for index in range(len(direction)):
-        if direction[index] == 'X/Y/Z':
-            direction[index:index + 3] = ['X', 'Y', 'Z']
-            index += 3
-        elif (direction[index] == 'X/1' or direction[index] == 'Y/1' or direction[index] == 'Z/1') and ipetype[index] == 'FPT':
+    data_c = data.copy()
+    data_c = data_c.dropna(subset = ['direction'])
+    data_c = data_c.sort_values(['assembly_no', 'measure_time_date', 'measure_time_time', 'car_no', 'measure_point_no'])
+    
+    direction = list(data_c['direction'])
+    ipetype = list(data_c['ipetype'])
+    
+    length = len(direction)
+    index = 0
+    
+    while index < length:
+        
+        if (direction[index] == "'X/1'" or direction[index] == "'Y/1'" or direction[index] == "'Z/1'") and ipetype[index] == 'FPT':
             direction[index] = 'A'
-        elif (direction[index] == 'X/1' or direction[index] == 'Y/1' or direction[index] == 'Z/1') and (ipetype[index] == 'BPT' or ipetype[index] == 'KPT'):
+            index += 1
+        elif (direction[index] == "'X/1'" or direction[index] == "'Y/1'" or direction[index] == "'Z/1'") and (ipetype[index] == 'BPT' or ipetype[index] == 'KPT'):
             direction[index] = 'B'
-        elif direction[index] == '2002/3/4':
+            index += 1
+        elif direction[index] == "'X/Y/Z'":
+            direction[index: index + 3] = ['X', 'Y', 'Z']
+            index += 3
+        elif direction[index] == "'X/Y'":
+            direction[index: index + 2] = ['X', 'Y']
+            index += 2
+        elif direction[index] == "'X/Z'":
+            direction[index: index + 2] = ['X', 'Z']
+            index += 2
+        elif direction[index] == "'Y/Z'":
+            direction[index: index + 2] = ['Y', 'Z']
+            index += 2
+        elif direction[index] == "'2/3/4'":
             direction[index:index + 3] = ['2', '3', '4']
             index += 3
-        elif direction[index] == '2/3/4':
-            direction[index:index + 3] = ['2', '3', '4']
-            index += 3
-        elif direction[index] == '2/4':
+        elif direction[index] == "'2/4'":
             direction[index:index + 2] = ['2', '4']
             index += 2
-    data['direction'] = direction
+        else:
+            index += 1
     
-    return data
+    data_c['direction'] = direction
+    
+    return data_c
+
+
+
+def parse_tolerance(awk_dic_path):
+   
+    awk_dic_data = pd.read_csv(awk_dic_path)
+    for assemble in awk_dic_data.groupby(['subassembly_no']):
+        assemble_name = assemble[0]
+        assemble_data = assemble[1]
+        
+        max_min_tol = pd.DataFrame(columns = ['key', 'lower', 'upper'])
+        
+        point_name = list(assemble_data['measure_point_no'])
+        point_type = list(assemble_data['type'])
+        stage = list(assemble_data['stage'])
+        point_direction = list(assemble_data['measure_direction'])
+        direction_x_tol_max = list(assemble_data['x_tolerance_max'])
+        direction_x_tol_min = list(assemble_data['x_tolerance_min'])
+        direction_y_tol_max = list(assemble_data['y_tolerance_max'])
+        direction_y_tol_min = list(assemble_data['y_tolerance_min'])
+        direction_z_tol_max = list(assemble_data['z_tolerance_max'])
+        direction_z_tol_min = list(assemble_data['z_tolerance_min'])
+        direction_1_tol_max = list(assemble_data['direction1_tolerance_max'])
+        direction_1_tol_min = list(assemble_data['direction1_tolerance_min'])
+        direction_2_tol_max = list(assemble_data['direction2_tolerance_max'])
+        direction_2_tol_min = list(assemble_data['direction2_tolerance_min'])
+        direction_3_tol_max = list(assemble_data['direction3_tolerance_max'])
+        direction_3_tol_min = list(assemble_data['direction3_tolerance_min'])
+        direction_4_tol_max = list(assemble_data['direction4_tolerance_max'])
+        direction_4_tol_min = list(assemble_data['direction4_tolerance_min'])
+        direction_5_tol_max = list(assemble_data['direction5_tolerance_max'])
+        direction_5_tol_min = list(assemble_data['direction5_tolerance_min'])
+        direction_6_tol_max = list(assemble_data['direction6_tolerance_max'])
+        direction_6_tol_min = list(assemble_data['direction6_tolerance_min'])
+
+        for index in range(len(point_direction)):
+            
+            if point_direction[index].find('X') != -1:
+                tol_max = direction_x_tol_max[index]
+                tol_min = direction_x_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + 'X'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+            
+            if point_direction[index].find('Y') != -1:
+                tol_max = direction_y_tol_max[index]
+                tol_min = direction_y_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + 'Y'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+                
+            if point_direction[index].find('Z') != -1:
+                tol_max = direction_z_tol_max[index]
+                tol_min = direction_z_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + 'Z'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+                
+            if point_direction[index].find('1') != -1:
+                tol_max = direction_1_tol_max[index]
+                tol_min = direction_1_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + '1'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+                
+            if point_direction[index].find('2') != -1:
+                tol_max = direction_2_tol_max[index]
+                tol_min = direction_2_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + '2'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+            
+            if point_direction[index].find('3') != -1:
+                tol_max = direction_3_tol_max[index]
+                tol_min = direction_3_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + '3'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+                
+            if point_direction[index].find('4') != -1:
+                tol_max = direction_4_tol_max[index]
+                tol_min = direction_4_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + '4'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+                
+            if point_direction[index].find('5') != -1:
+                tol_max = direction_5_tol_max[index]
+                tol_min = direction_5_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + '5'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+                
+            if point_direction[index].find('6') != -1:
+                tol_max = direction_6_tol_max[index]
+                tol_min = direction_6_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + '6'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+            
+            if (point_direction[index] == "'X/1'" or point_direction[index] == "'Y/1'" or point_direction[index] == "'Z/1'") and (point_type[index] == 'FPT'):
+                tol_max = direction_1_tol_max[index]
+                tol_min = direction_1_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + 'A'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+            elif (point_direction[index] == "'X/1'" or point_direction[index] == "'Y/1'" or point_direction[index] == "'Z/1'") and (point_type[index] == 'BPT' or point_type[index] == 'KPT'):
+                tol_max = direction_1_tol_max[index]
+                tol_min = direction_1_tol_min[index]
+                key = stage[index] + '-' + point_name[index] + '-' + 'B'
+                record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
+                max_min_tol = max_min_tol.append(record, ignore_index = True)
+            
+        save_path = 'lower_upper_limits'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        max_min_tol.to_csv(save_path + os.path.sep + assemble_name + '.csv', index = False)
+        
+    print('get tolerance finished.')
 
 
 
 def get_limits(assemble_no):
     _format = '.csv'
     
-    file_path = './upper_lower_limits/' + str(assemble_no) + '_lower_upper' + _format
+    file_path = './lower_upper_limits/' + str(assemble_no) + _format
     
     data = pd.read_csv(file_path)
     lower_dict = {}
@@ -100,7 +238,7 @@ def parallel_analysis(assemble_name, assemble_data, current_folder):
     assemble_data['key'] = assemble_data['stage'] + '-' + assemble_data['measure_point_no'] + '-' + assemble_data['direction']
     assemble_data = assemble_data[['key', 'measure_time_date', 'deviation']]
     
-    assemble_data['deviation'] = assemble_data['deviation'].astype(float)
+    #assemble_data['deviation'] = assemble_data['deviation'].astype(float)
         
     periods = 30
     point_unpredicted = pd.DataFrame(columns = ['point_no'])
@@ -130,12 +268,10 @@ def parallel_analysis(assemble_name, assemble_data, current_folder):
                 df_res['ds'] = list(temp_data.index)
                 df_res['yhat'] = list(temp_data['yhat'])
                 
-                
                 df_res['yhat_lower'] = 0
                 df_res['yhat_upper'] = 0
                 
                 df_res = df_res.append(forecasts, ignore_index = True)               
-                
                 
                 lower = lower_dict[point_name]
                 upper = upper_dict[point_name]
@@ -185,15 +321,18 @@ if __name__ == '__main__':
     starttime = time.time()
     f = open('running records.txt', 'w')
     
-    path = config['awk_data_path']
+    awk_dic_path = config['awk_dic_path']
+    parse_tolerance(awk_dic_path)
     
-    data = pd.read_csv(path, dtype = str) 
+    awk_data_path = config['awk_data_path']
     
-    data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '')    
+    data = pd.read_csv(awk_data_path, dtype = str) 
+    
+    data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '') 
+    data['deviation'] = data['deviation'].astype(float)
     
     f.write('direction transform...' + '\n')
     data = direction_transform(data)
-    
     
     f.write('processing data of all stages...' + '\n')
     
