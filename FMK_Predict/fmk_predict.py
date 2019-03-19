@@ -26,26 +26,6 @@ def get_stage_data(data, stage_no):
     return stage_data
 
 
-# 这里是否需要调整成和fmk_parse一致
-def direction_transform(data):
-    data = data.dropna(subset = ['direction'])
-    
-    direction = list(data['direction'])
-    ipetype = list(data['ipetype'])
-    for index in range(len(direction)):
-        if direction[index] == 'X/Y/Z':
-            direction[index:index + 3] = ['X', 'Y', 'Z']
-            index += 3
-        elif (direction[index] == 'X/1' or direction[index] == 'Y/1' or direction[index] == 'Z/1') and ipetype[index] == 'FPT':
-            direction[index] = 'A'
-        elif (direction[index] == 'X/1' or direction[index] == 'Y/1' or direction[index] == 'Z/1') and (ipetype[index] == 'BPT' or ipetype[index] == 'KPT'):
-            direction[index] = 'B'
-    data['direction'] = direction
-    print('direction transform finished.')
-    
-    return data
-
-
 
 def get_tolerance(fmk_dic_path):
     
@@ -90,9 +70,6 @@ def do_analysis(dimensional_chain_name, dimensional_chain_data, lower_dict, uppe
     for point in dimensional_chain_data.groupby(['key']):
         point_name = point[0]
         point_data = point[1]
-        print('----------------')
-        print(point_name)
-        print('----------------')
         if point_name in lower_dict.keys() and point_name in upper_dict.keys():
             training_data = point_data[['measure_time_date', 'deviation']]
             training_data = training_data.sort_values(['measure_time_date'])
@@ -171,44 +148,36 @@ if __name__ == '__main__':
     starttime = time.time()
     f = open('running records.txt', 'w')   
     
-    path = config['fmk_data_path']
+    fmk_path = config['fmk_data_path']
     
-    data = pd.read_csv(path, dtype = str) 
+    fmk_data = pd.read_csv(fmk_path, dtype = str) 
     
-    dimensional_chain_list = list(data["dimensional_chain"])
+    dimensional_chain_list = list(fmk_data["dimensional_chain"])
     for i in range(len(dimensional_chain_list)):
         dimensional_chain_list[i] = dimensional_chain_list[i].replace("\r\n"," ")
-    data["dimensional_chain"] = dimensional_chain_list
+    fmk_data["dimensional_chain"] = dimensional_chain_list
     
-    data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '')
-    data['deviation'] = data['deviation'].astype(float)
-    
-    f.write('direction transform...' + '\n')
-    data = direction_transform(data)
+    fmk_data['measure_time_date'] = pd.to_datetime(fmk_data.measure_time_date, format = '')
+    fmk_data['deviation'] = fmk_data['deviation'].astype(float)
     
     f.write('processing data of all stages...' + '\n')
-    
     result_folder = config['result_path']
     stage_all_folder = result_folder + 'Stage All'
     
     if not os.path.exists(stage_all_folder):
         os.makedirs(stage_all_folder)
-    parallel_analysis(data, stage_all_folder)   
+    parallel_analysis(fmk_data, stage_all_folder)   
     
-    
-    stages = pd.Series(data['stage'])
+    stages = pd.Series(fmk_data['stage'])
     stage_counts = stages.value_counts()
     for stage_name in stage_counts.index:
         f.write('processing data of stage ' + stage_name + '\n')
-        
         stage_folder = result_folder + stage_name
-        
         if not os.path.exists(stage_folder):
             os.makedirs(stage_folder)
         
-        stage_data = get_stage_data(data, stage_name)
+        stage_data = get_stage_data(fmk_data, stage_name)
         parallel_analysis(stage_data, stage_folder)
-    
         
     endtime = time.time()
     f.write('finished. use time(s):' + str(endtime - starttime) + '\n')
