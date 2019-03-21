@@ -14,20 +14,28 @@ import json
 from math import sqrt, sin, cos
 
 
-
+# 这个方向转换仅仅是变换方向，不关心每个方向的偏差值是多少
 def direction_transform(data):
+    '''
     data_c = data.copy()
     data_c = data_c.dropna(subset = ['direction'])
-    data_c = data_c.sort_values(['assembly_no', 'car_no', 'measure_point_no', 'measure_time_date', 'measure_time_time'])
+    data_c = data_c.sort_values(['assembly_no', 'car_no', 'measure_point_no', 'measure_time_date', 'measure_time_time', 'z_standard_low', 'z_standard_upper', 'y_standard_low', 'y_standard_upper', 'x_standard_low', 'x_standard_upper'])
     
     direction = list(data_c['direction'])
     measure_point = list(data_c['measure_point_no'])
     car_no = list(data_c['car_no'])
+    ipetype = list(data_c['ipetype'])
     
     length = len(direction)
     index = 0
     while index < length:
-        if (direction[index] == 'X/Y/Z'):
+        if (direction[index] == "'X/1'" or direction[index] == "'Y/1'" or direction[index] == "'Z/1'") and ipetype[index] == 'FPT':
+            direction[index] = 'A'
+            index += 1
+        elif (direction[index] == "'X/1'" or direction[index] == "'Y/1'" or direction[index] == "'Z/1'") and (ipetype[index] == 'BPT' or ipetype[index] == 'KPT'):
+            direction[index] = 'B'
+            index += 1
+        elif (direction[index] == "'X/Y/Z'"):
             if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]) and (index + 2 < length) and (measure_point[index] == measure_point[index + 2]) and (direction[index] == direction[index + 2]) and (car_no[index] == car_no[index + 2]):
                 direction[index:index + 3] = ['X', 'Y', 'Z']
                 index += 3
@@ -38,12 +46,93 @@ def direction_transform(data):
                 direction.append('Y')
                 direction.append('Z')
                 index += 1
+                print('X/Y/Z direction append finished...')
+        elif (direction[index] == "'X/Y'"):
+            if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]):
+                direction[index: index + 2] = ['X', 'Y']
+                index += 2
+            else:
+                direction[index] = 'X'
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
+                direction.append('Y')
+                index += 1
+                print('X/Y direction append finished...')
+        elif (direction[index] == "'X/Z'"):
+            if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]):
+                direction[index: index + 2] = ['X', 'Z']
+                index += 2
+            else:
+                direction[index] = 'X'
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
+                direction.append('Z')
+                index += 1
+                print('X/Z direction append finished...')
+        elif (direction[index] == "'Y/Z'"):
+            if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]):
+                direction[index: index + 2] = ['Y', 'Z']
+                index += 2
+            else:
+                direction[index] = 'Y'
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
+                direction.append('Z')
+                index += 1
+                print('Y/Z direction append finished...')
+        elif (direction[index] == "'2/3/4'"):
+            if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]) and (index + 2 < length) and (measure_point[index] == measure_point[index + 2]) and (direction[index] == direction[index + 2]) and (car_no[index] == car_no[index + 2]):
+                direction[index: index + 3] = ['2', '3', '4']
+                index += 3
+            else:
+                direction[index] = '2'
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
+                direction.append('3')
+                direction.append('4')
+                index += 1
+                print('2/3/4 direction append finished...')
+        elif (direction[index] == "'2/4'"):
+            if (index + 1 < length) and (measure_point[index] == measure_point[index + 1]) and (direction[index] == direction[index + 1]) and (car_no[index] == car_no[index + 1]):
+                direction[index: index + 2] = ['2', '4']
+                index += 2
+            else:
+                direction[index] = '2'
+                data_c = data_c.append(data_c.iloc[index], ignore_index = True)
+                direction.append('4')
+                index += 1
+                print('2/4 direction append finished...')
         else:
             index += 1
     
     data_c['direction'] = direction
     
     return data_c
+    '''
+    
+    data_c = data.copy()
+    data_c = data_c.dropna(subset = ['direction_flag'])
+    
+    direction_flag = list(data_c['direction_flag'])
+    ipetype = list(data_c['ipetype'])
+    direction_new = []
+    
+    length = len(direction_flag)
+    index = 0
+    
+    while index < length:
+        if (direction_flag[index] == '1') and (ipetype[index] == 'BPT'):
+            direction_new.append('B')
+            index += 1
+        elif (direction_flag[index] == '1') and (ipetype[index] != 'BPT'):
+            direction_new.append('A')
+            index += 1
+        else:
+            direction_new.append(direction_flag[index])
+            index += 1
+            
+    data_c['direction'] = direction_new
+    
+    return data_c
+
+
 
 
 
@@ -51,24 +140,19 @@ def direction_transform(data):
 def get_direction_match_data(data, direction):
     
     res = data.copy()
-    if direction == 'dx' or direction == 'dX':
-        res = res[(res['direction'] == 'X') | (res['direction'] == 'X/1')]
-    elif direction == 'dy' or direction == 'dY':
-        res = res[(res['direction'] == 'Y') | (res['direction'] == 'Y/1')]
-    elif direction == 'dz' or direction == 'dZ':
-        res = res[(res['direction'] == 'Z') | (res['direction'] == 'Z/1')]
-    elif direction == 'X':
-        res = res[(res['direction'] == 'X') | (res['direction'] == 'X/1')]
-    elif direction == 'Y':
-        res = res[(res['direction'] == 'Y') | (res['direction'] == 'Y/1')]
-    elif direction == 'Z':
-        res = res[(res['direction'] == 'Z') | (res['direction'] == 'Z/1')]
+    if direction == 'dx' or direction == 'dX' or direction == 'X':
+        res = res[(res['direction_flag'] == 'X') | ((res['direction_flag'] == '1') & (res['direction'] == "'X/1'"))]
+    elif direction == 'dy' or direction == 'dY' or direction == 'Y':
+        res = res[(res['direction_flag'] == 'Y') | ((res['direction_flag'] == '1') & (res['direction'] == "'Y/1'"))]
+    elif direction == 'dz' or direction == 'dZ' or direction == 'Z':
+        res = res[(res['direction_flag'] == 'Z') | ((res['direction_flag'] == '1') & (res['direction'] == "'Z/1'"))]
     elif direction == 'A':
-        res = res[((res['direction'] == 'X/1') | (res['direction'] == 'Y/1') | (res['direction'] == 'Z/1')) & (res['ipetype'] == 'FPT')]
+        res = res[(res['direction_flag'] == '1') & (res['ipetype'] != 'BPT')]
     elif direction == 'B':
-        res = res[((res['direction'] == 'X/1') | (res['direction'] == 'Y/1') | (res['direction'] == 'Z/1')) & ((res['ipetype'] == 'BPT') | (res['ipetype'] == 'KPT'))]
+        res = res[(res['direction_flag'] == '1') & (res['ipetype'] == 'BPT')]
         
     return res
+    
     
 
 
@@ -127,7 +211,8 @@ def get_point_difference(data_point_a, data_point_b):
 
 
 
-def get_vars_known_according_time_carno(data, time, car_no):
+def get_vars_known_according_time_carno(data, time, car_no, direction):
+    standard_value_dic = {'X':'x_standard', 'Y':'y_standard', 'Z':'z_standard'}
     for i in range(len(data)):        
         if (data.iloc[i]['time'] == time) and (data.iloc[i]['car_no'] == car_no):
             x = data.iloc[i]['x_value']
@@ -140,9 +225,8 @@ def get_vars_known_according_time_carno(data, time, car_no):
                 variable_known.append(float(x))
                 variable_known.append(float(y))
                 variable_known.append(float(z))
-            dic = {'X':'x_standard', 'X/1':'x_standard', 'Y':'y_standard', 'Y/1':'y_standard', 'Z':'z_standard', 'Z/1':'z_standard'}
-            direction = data.iloc[i]['direction']
-            t = data.iloc[i][dic[direction]]
+            
+            t = data.iloc[i][standard_value_dic[direction]]
             variable_known.append(float(t))
             break
         
@@ -185,10 +269,10 @@ def f(x):
     return equations
 
 
-def get_awk_dic():
+def get_touch_direction():
     
-    awk_dic_path = config['awk_dic_path']
-    data = pd.read_csv(awk_dic_path)
+    touch_direction_dic_path = config['touchDirection_dic_path']
+    data = pd.read_csv(touch_direction_dic_path)
     touch_direction_dic = {}
     key = list(data['key'])
     direction = list(data['IPE.TouchDirection'])
@@ -242,36 +326,42 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
         print('measure point  ' + str(point_no) + '  not find in awk data')
     
     data_point_0 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[0]]
-    data_point_0 = data_point_0[(data_point_0['direction'].astype(str) == benchmark_point_dir_list[0]) | (data_point_0['direction'].astype(str) == benchmark_point_dir_list[0] + '/1')]
+    data_point_0 = get_direction_match_data(data_point_0, benchmark_point_dir_list[0])
+    #data_point_0 = data_point_0[(data_point_0['direction'].astype(str) == benchmark_point_dir_list[0]) | (data_point_0['direction'].astype(str) == benchmark_point_dir_list[0] + '/1')]
     if len(data_point_0) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[0]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_1 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[1]]
-    data_point_1 = data_point_1[(data_point_1['direction'].astype(str) == benchmark_point_dir_list[1]) | (data_point_1['direction'].astype(str) == benchmark_point_dir_list[1] + '/1')]
+    data_point_1 = get_direction_match_data(data_point_1, benchmark_point_dir_list[1])
+    #data_point_1 = data_point_1[(data_point_1['direction'].astype(str) == benchmark_point_dir_list[1]) | (data_point_1['direction'].astype(str) == benchmark_point_dir_list[1] + '/1')]
     if len(data_point_1) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[1]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_2 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[2]]
-    data_point_2 = data_point_2[(data_point_2['direction'].astype(str) == benchmark_point_dir_list[2]) | (data_point_2['direction'].astype(str) == benchmark_point_dir_list[2] + '/1')]
+    data_point_2 = get_direction_match_data(data_point_2, benchmark_point_dir_list[2])
+    #data_point_2 = data_point_2[(data_point_2['direction'].astype(str) == benchmark_point_dir_list[2]) | (data_point_2['direction'].astype(str) == benchmark_point_dir_list[2] + '/1')]
     if len(data_point_2) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[2]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_3 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[3]]
-    data_point_3 = data_point_3[(data_point_3['direction'].astype(str) == benchmark_point_dir_list[3]) | (data_point_3['direction'].astype(str) == benchmark_point_dir_list[3] + '/1')]
+    data_point_3 = get_direction_match_data(data_point_3, benchmark_point_dir_list[3])
+    #data_point_3 = data_point_3[(data_point_3['direction'].astype(str) == benchmark_point_dir_list[3]) | (data_point_3['direction'].astype(str) == benchmark_point_dir_list[3] + '/1')]
     if len(data_point_3) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[3]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
     data_point_4 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[4]]
-    data_point_4 = data_point_4[(data_point_4['direction'].astype(str) == benchmark_point_dir_list[4]) | (data_point_4['direction'].astype(str) == benchmark_point_dir_list[4] + '/1')]
+    data_point_4 = get_direction_match_data(data_point_4, benchmark_point_dir_list[4])
+    #data_point_4 = data_point_4[(data_point_4['direction'].astype(str) == benchmark_point_dir_list[4]) | (data_point_4['direction'].astype(str) == benchmark_point_dir_list[4] + '/1')]
     if len(data_point_4) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[4]) + ' of measure point  ' + str(point_no) + ' not find in awk data')    
     
     data_point_5 = data_assemble[data_assemble['measure_point_no'] == benchmark_point_name_list[5]]
-    data_point_5 = data_point_5[(data_point_5['direction'].astype(str) == benchmark_point_dir_list[5]) | (data_point_5['direction'].astype(str) == benchmark_point_dir_list[5] + '/1')]
+    data_point_5 = get_direction_match_data(data_point_5, benchmark_point_dir_list[5])
+    #data_point_5 = data_point_5[(data_point_5['direction'].astype(str) == benchmark_point_dir_list[5]) | (data_point_5['direction'].astype(str) == benchmark_point_dir_list[5] + '/1')]
     if len(data_point_5) == 0:
         print('benchmark point  ' + str(benchmark_point_name_list[5]) + ' of measure point  ' + str(point_no) + ' not find in awk data')
     
-    '''
+    
     data_point_0.to_csv('data_point_0.csv', index = False)
     data_point_1.to_csv('data_point_1.csv', index = False)
     data_point_2.to_csv('data_point_2.csv', index = False)
@@ -279,7 +369,7 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     data_point_4.to_csv('data_point_4.csv', index = False)
     data_point_5.to_csv('data_point_5.csv', index = False)
     data_point_awk.to_csv('data_point_awk.csv', index = False)
-    '''
+    
     
     time_list = list(data_point_awk['time'])
     carno_list = list(data_point_awk['car_no'])
@@ -290,12 +380,12 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
         car_no = carno_list[index]
         
         variable_known = []
-        get_vars_known_according_time_carno(data_point_0, time, car_no)
-        get_vars_known_according_time_carno(data_point_1, time, car_no)
-        get_vars_known_according_time_carno(data_point_2, time, car_no)
-        get_vars_known_according_time_carno(data_point_3, time, car_no)
-        get_vars_known_according_time_carno(data_point_4, time, car_no)
-        get_vars_known_according_time_carno(data_point_5, time, car_no)
+        get_vars_known_according_time_carno(data_point_0, time, car_no, benchmark_point_dir_list[0])
+        get_vars_known_according_time_carno(data_point_1, time, car_no, benchmark_point_dir_list[1])
+        get_vars_known_according_time_carno(data_point_2, time, car_no, benchmark_point_dir_list[2])
+        get_vars_known_according_time_carno(data_point_3, time, car_no, benchmark_point_dir_list[3])
+        get_vars_known_according_time_carno(data_point_4, time, car_no, benchmark_point_dir_list[4])
+        get_vars_known_according_time_carno(data_point_5, time, car_no, benchmark_point_dir_list[5])
         
         if len(variable_known) == 24:
             
@@ -342,7 +432,7 @@ def transform_yes_singlepoint_yes(data, assemble_no, point_no, benchmark_point_n
     z_standard = list(res['z_standard'])
     direction = list(res['direction'])
     stage = list(res['stage'])
-    touch_direction_dic = get_awk_dic()
+    touch_direction_dic = get_touch_direction()
     
     if direction_name == 'X':
         for i in range(len(res)):
@@ -532,8 +622,7 @@ if __name__ == '__main__':
     dev_correction = get_dev_correction(config['dev_correction'])
     
     data_awk = pd.read_csv(awk_data_path, dtype = str)
-    data_awk = direction_transform(data_awk)
-    
+    #data_awk = direction_transform(data_awk)
     data_awk = dataformat_transform(data_awk)
     
     data_awk['time'] = data_awk['measure_time_date'] + '-' + data_awk['measure_time_time']
