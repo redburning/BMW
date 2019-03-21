@@ -1,5 +1,5 @@
 {
-    "awk_data_path": "./g38_awk_0318_2.csv",
+    "awk_data_path": "./g38_awk_0319.csv",
 	"awk_dic_path": "./g38_awk_dic.csv",
 	"result_path": "./result/",
 	"threads_no": 2

@@ -32,6 +32,7 @@ def get_stage_data(data, stage_no):
 
 
 def direction_transform(data):
+    '''
     data_c = data.copy()
     data_c = data_c.dropna(subset = ['direction'])
     data_c = data_c.sort_values(['assembly_no', 'measure_time_date', 'measure_time_time', 'car_no', 'measure_point_no'])
@@ -74,12 +75,39 @@ def direction_transform(data):
     data_c['direction'] = direction
     
     return data_c
+    '''
+    
+    data_c = data.copy()
+    data_c = data_c.dropna(subset = ['direction_flag'])
+    
+    direction_flag = list(data_c['direction_flag'])
+    ipetype = list(data_c['ipetype'])
+    direction_new = []
+    
+    length = len(direction_flag)
+    index = 0
+    
+    while index < length:
+        if (direction_flag[index] == '1') and (ipetype[index] == 'BPT'):
+            direction_new.append('B')
+            index += 1
+        elif (direction_flag[index] == '1') and (ipetype[index] != 'BPT'):
+            direction_new.append('A')
+            index += 1
+        else:
+            direction_new.append(direction_flag[index])
+            index += 1
+            
+    data_c['direction'] = direction_new
+    
+    return data_c
+    
 
 
 
 def parse_tolerance(awk_dic_path):
    
-    awk_dic_data = pd.read_csv(awk_dic_path)
+    awk_dic_data = pd.read_csv(awk_dic_path, dtype = str)
     for assemble in awk_dic_data.groupby(['subassembly_no']):
         assemble_name = assemble[0]
         assemble_data = assemble[1]
@@ -174,13 +202,13 @@ def parse_tolerance(awk_dic_path):
                 record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
                 max_min_tol = max_min_tol.append(record, ignore_index = True)
             
-            if (point_direction[index] == "'X/1'" or point_direction[index] == "'Y/1'" or point_direction[index] == "'Z/1'") and (point_type[index] == 'FPT'):
+            if (point_direction[index] == "'X/1'" or point_direction[index] == "'Y/1'" or point_direction[index] == "'Z/1'") and (point_type[index] != 'BPT'):
                 tol_max = direction_1_tol_max[index]
                 tol_min = direction_1_tol_min[index]
                 key = stage[index] + '-' + point_name[index] + '-' + 'A'
                 record = {'key' : key, 'lower' : tol_min, 'upper' : tol_max}
                 max_min_tol = max_min_tol.append(record, ignore_index = True)
-            elif (point_direction[index] == "'X/1'" or point_direction[index] == "'Y/1'" or point_direction[index] == "'Z/1'") and (point_type[index] == 'BPT' or point_type[index] == 'KPT'):
+            if (point_direction[index] == "'X/1'" or point_direction[index] == "'Y/1'" or point_direction[index] == "'Z/1'") and (point_type[index] == 'BPT'):
                 tol_max = direction_1_tol_max[index]
                 tol_min = direction_1_tol_min[index]
                 key = stage[index] + '-' + point_name[index] + '-' + 'B'
@@ -326,13 +354,13 @@ if __name__ == '__main__':
     
     awk_data_path = config['awk_data_path']
     
-    data = pd.read_csv(awk_data_path, dtype = str) 
+    awk_data = pd.read_csv(awk_data_path, dtype = str)
     
-    data['measure_time_date'] = pd.to_datetime(data.measure_time_date, format = '') 
-    data['deviation'] = data['deviation'].astype(float)
+    awk_data['measure_time_date'] = pd.to_datetime(awk_data.measure_time_date, format = '')
+    awk_data['deviation'] = awk_data['deviation'].astype(float)
     
     f.write('direction transform...' + '\n')
-    data = direction_transform(data)
+    awk_data = direction_transform(awk_data)
     
     f.write('processing data of all stages...' + '\n')
     
@@ -340,21 +368,20 @@ if __name__ == '__main__':
     
     if not os.path.exists(stage_all_folder):
         os.makedirs(stage_all_folder)
-    do_analysis(data, stage_all_folder)   
+    do_analysis(awk_data, stage_all_folder)   
     
-    stages = pd.Series(data['stage'])
+    stages = pd.Series(awk_data['stage'])
     stage_counts = stages.value_counts()
     
     
     for stage_name in stage_counts.index:
         
         f.write('processing data of stage ' + stage_name + '\n')
-        
         stage_folder = config['result_path'] + stage_name
         
         if not os.path.exists(stage_folder):
             os.makedirs(stage_folder)
-        stage_data = get_stage_data(data, stage_name)
+        stage_data = get_stage_data(awk_data, stage_name)
         do_analysis(stage_data, stage_folder)
     
     
