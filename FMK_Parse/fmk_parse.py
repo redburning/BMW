@@ -22,6 +22,8 @@ def direction_transform(data):
     data_c = data_c.sort_values(['assembly_no', 'car_no', 'measure_point_no', 'measure_time_date', 'measure_time_time', 'z_standard_low', 'z_standard_upper', 'y_standard_low', 'y_standard_upper', 'x_standard_low', 'x_standard_upper'])
     
     direction = list(data_c['direction'])
+    for i in range(len(direction)):
+        direction[i] = direction[i][1:-1]
     measure_point = list(data_c['measure_point_no'])
     car_no = list(data_c['car_no'])
     ipetype = list(data_c['ipetype'])
